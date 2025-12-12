@@ -163,4 +163,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 30
-  expGemPrefab: {fileID: 2736430814523800939, guid: 641b104e0f94e7541a6b3197b7dcd3bb, type: 3}
+  expGemPrefab: {fileID: 189378404564887851, guid: baf9cfe1685c71d41a718f801777ac24, type: 3}
