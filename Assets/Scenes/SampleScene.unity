@@ -1397,7 +1397,7 @@ MonoBehaviour:
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 1
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -2880,7 +2880,7 @@ MonoBehaviour:
   onValueChanged:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 0}
+      - m_Target: {fileID: 1631677621}
         m_TargetAssemblyTypeName: PlayerController, Assembly-CSharp
         m_MethodName: SetAutoLevelUp
         m_Mode: 0
@@ -3871,6 +3871,10 @@ PrefabInstance:
       propertyPath: gameOverPanel
       value: 
       objectReference: {fileID: 531376810}
+    - target: {fileID: 6362222771361191928, guid: d3bd43905d7a6174188514e0cb704ba5, type: 3}
+      propertyPath: isAutoLevelUp
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6362222771361191928, guid: d3bd43905d7a6174188514e0cb704ba5, type: 3}
       propertyPath: virtualJoystick
       value: 
