@@ -99,16 +99,20 @@ public class PlayerController : MonoBehaviour
     }
 
     // 3D 충돌 감지 (OnTriggerEnter)
-    void OnTriggerStay(Collider other)
+    // 기존 OnTriggerStay를 지우고 이 함수를 복사해서 붙여넣으세요!
+    void OnCollisionStay(Collision collision)
     {
         if (isDead) return;
 
-        if (other.CompareTag("Enemy"))
+        // Collision(충돌) 정보에서 상대방 태그를 확인
+        // 주의: collision.collider.CompareTag를 써야 합니다.
+        if (collision.collider.CompareTag("Enemy"))
         {
             if (Time.time > lastDamageTime + damageCooldown)
             {
                 TakeDamage(10);
                 lastDamageTime = Time.time;
+                Debug.Log("💥 으악! 적과 부딪혔다!"); // 확인용 로그
             }
         }
     }
