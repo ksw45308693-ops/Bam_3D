@@ -1,26 +1,51 @@
-using UnityEngine;
-using UnityEngine.UI; // UI »ç¿ë
+ï»¿using UnityEngine;
+using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour
 {
-    public Text timerText; // Å¸ÀÌ¸Ó ÅØ½ºÆ® ¿¬°á
+    [Header("UI")]
+    public Text timerText;
+    public Text killText; // â­ ì¶”ê°€: í‚¬ìˆ˜ í…ìŠ¤íŠ¸ ì—°ê²°
+
     private float survivalTime;
     private bool isLive = true;
+    private int killCount = 0; // â­ ì¶”ê°€: ë‚´ë¶€ ì¹´ìš´íŠ¸ ë³€ìˆ˜
+
+    void Start()
+    {
+        // ì‹œì‘í•  ë•Œ 0ìœ¼ë¡œ ì´ˆê¸°í™”
+        killCount = 0;
+        UpdateKillUI();
+    }
 
     void Update()
     {
         if (!isLive) return;
 
-        survivalTime += Time.deltaTime; // ½Ã°£ ´õÇÏ±â
-
-        // ½Ã°£ Æ÷¸Ë º¯°æ (ºĞ:ÃÊ)
+        survivalTime += Time.deltaTime;
         int min = (int)(survivalTime / 60);
         int sec = (int)(survivalTime % 60);
 
         if (timerText != null)
         {
-            // "00:00" Çü½ÄÀ¸·Î ¹®ÀÚ¿­ ¸¸µé±â
             timerText.text = string.Format("{0:D2}:{1:D2}", min, sec);
+        }
+    }
+
+    // â­ ì™¸ë¶€(ì )ì—ì„œ í˜¸ì¶œí•  í•¨ìˆ˜: ì²˜ì¹˜ ìˆ˜ 1 ì¦ê°€
+    public void AddKill()
+    {
+        killCount++;
+        UpdateKillUI();
+    }
+
+    // UI ê°±ì‹  í•¨ìˆ˜
+    void UpdateKillUI()
+    {
+        if (killText != null)
+        {
+            // ì›í•˜ëŠ” í˜•ì‹ìœ¼ë¡œ í‘œì‹œ (ì˜ˆ: "â˜ ï¸ 150")
+            killText.text = "Kill :  " + killCount.ToString();
         }
     }
 }

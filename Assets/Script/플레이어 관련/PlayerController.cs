@@ -7,6 +7,12 @@ public class PlayerController : MonoBehaviour
     [Header("Movement")]
     public float moveSpeed = 5f;
 
+    [Header("Stats")] // ⭐ 새로운 능력치들
+    public float damageMultiplier = 1f; // 공격력 배율 (기본 1.0)
+    public float magnetRange = 4f;      // 자석 범위
+    public int maxHealth = 100;
+    public int currentHealth;
+
     [Header("AI Auto Dodge")]
     public bool useAutoMode = true;
     public float detectionRadius = 5f;
@@ -15,12 +21,6 @@ public class PlayerController : MonoBehaviour
     [Header("UI Controls")]
     public VirtualJoystick virtualJoystick;
 
-    [Header("Stats")]
-    public int maxHealth = 100;
-    public int currentHealth;
-    public float damageCooldown = 0.5f;
-    private float lastDamageTime;
-
     [Header("Experience")]
     public int level = 1;
     public int currentExp = 0;
@@ -28,21 +28,25 @@ public class PlayerController : MonoBehaviour
     public bool isAutoLevelUp = false;
 
     [Header("UI")]
-    public GameObject levelUpPanel;
+    public GameObject levelUpPanel; // 패널 (이제 매니저가 관리하지만 참조는 유지)
     public GameObject gameOverPanel;
     public Slider expSlider;
     public Slider hpSlider;
-    public Text levelText;
 
-    private Rigidbody rb; // 3D Rigidbody
-    private Vector3 moveInput; // Vector3
+    private Rigidbody rb;
+    private Vector3 moveInput;
     private WeaponController weapon;
+    private LevelUpManager levelUpManager; // ⭐ 레벨업 매니저 연결
+
     private bool isDead = false;
+    private float damageCooldown = 0.5f;
+    private float lastDamageTime;
 
     void Start()
     {
-        rb = GetComponent<Rigidbody>(); // 3D 컴포넌트 가져오기
+        rb = GetComponent<Rigidbody>();
         weapon = GetComponent<WeaponController>();
+        levelUpManager = FindObjectOfType<LevelUpManager>(); // 매니저 찾기
 
         currentHealth = maxHealth;
         UpdateExpUI();
@@ -53,10 +57,7 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
 
-        // 1. 입력 받기
-        float x = 0;
-        float z = 0; // Y 대신 Z 사용
-
+        float x = 0, z = 0;
         if (virtualJoystick != null && virtualJoystick.InputVector != Vector2.zero)
         {
             x = virtualJoystick.InputVector.x;
@@ -69,83 +70,32 @@ public class PlayerController : MonoBehaviour
         }
 
         Vector3 manualInput = new Vector3(x, 0, z).normalized;
+        moveInput = (manualInput != Vector3.zero) ? manualInput : (useAutoMode ? GetAutoDodgeVector() : Vector3.zero);
 
-        // 2. 이동 결정 (수동 vs 오토)
-        if (manualInput != Vector3.zero)
-        {
-            moveInput = manualInput;
-        }
-        else if (useAutoMode)
-        {
-            moveInput = GetAutoDodgeVector();
-        }
-        else
-        {
-            moveInput = Vector3.zero;
-        }
-
-        // 3. 캐릭터 회전 (이동 방향 바라보기)
         if (moveInput != Vector3.zero)
-        {
             transform.forward = Vector3.Lerp(transform.forward, moveInput, 10f * Time.deltaTime);
-        }
     }
 
     void FixedUpdate()
     {
         if (isDead) return;
-        // 3D 물리 이동
         rb.MovePosition(rb.position + moveInput * moveSpeed * Time.fixedDeltaTime);
     }
 
-    // 3D 충돌 감지 (OnTriggerEnter)
-    // 기존 OnTriggerStay를 지우고 이 함수를 복사해서 붙여넣으세요!
+    // --- 충돌 및 데미지 ---
     void OnCollisionStay(Collision collision)
     {
         if (isDead) return;
-
-        // Collision(충돌) 정보에서 상대방 태그를 확인
-        // 주의: collision.collider.CompareTag를 써야 합니다.
         if (collision.collider.CompareTag("Enemy"))
         {
             if (Time.time > lastDamageTime + damageCooldown)
             {
                 TakeDamage(10);
                 lastDamageTime = Time.time;
-                Debug.Log("💥 으악! 적과 부딪혔다!"); // 확인용 로그
             }
         }
     }
 
-    // --- AI 로직 (3D 버전) ---
-    Vector3 GetAutoDodgeVector()
-    {
-        // 3D에서는 구(Sphere) 형태로 주변 감지
-        Collider[] enemies = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer);
-
-        if (enemies.Length == 0) return Vector3.zero;
-
-        Vector3 fleeDirection = Vector3.zero;
-
-        foreach (Collider enemy in enemies)
-        {
-            Vector3 directionToMe = transform.position - enemy.transform.position;
-            directionToMe.y = 0; // 높이 차이는 무시
-
-            fleeDirection += directionToMe.normalized / (directionToMe.magnitude + 0.1f);
-        }
-
-        return fleeDirection.normalized;
-    }
-
-    // 범위 그리기 (디버깅용)
-    void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, detectionRadius);
-    }
-
-    // --- (이하 기존 로직 유지) ---
     void TakeDamage(int damage)
     {
         currentHealth -= damage;
@@ -160,14 +110,7 @@ public class PlayerController : MonoBehaviour
         Time.timeScale = 0f;
     }
 
-    public void RetryGame()
-    {
-        Time.timeScale = 1f;
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-    }
-
-    public void SetAutoLevelUp(bool isOn) { isAutoLevelUp = isOn; }
-
+    // --- 레벨업 시스템 ---
     public void AddExp(int amount)
     {
         currentExp += amount;
@@ -181,22 +124,62 @@ public class PlayerController : MonoBehaviour
         level++;
         maxExp += 50;
 
-        if (isAutoLevelUp)
+        // ⭐ 오토 모드면 매니저에게 랜덤 선택 요청, 아니면 UI 띄우기 요청
+        if (levelUpManager != null)
         {
-            int randomChoice = Random.Range(0, 2);
-            if (randomChoice == 0) UpgradeSpeed();
-            else UpgradeAttack();
+            levelUpManager.ShowLevelUpWindow(isAutoLevelUp);
         }
-        else
-        {
-            if (levelUpPanel != null) { levelUpPanel.SetActive(true); Time.timeScale = 0f; }
-        }
+
         UpdateExpUI();
     }
 
-    public void UpgradeSpeed() { moveSpeed += 1f; CloseLevelUpPanel(); }
-    public void UpgradeAttack() { if (weapon != null) weapon.attackRate *= 0.9f; CloseLevelUpPanel(); }
-    void CloseLevelUpPanel() { levelUpPanel.SetActive(false); Time.timeScale = 1f; }
+    // ⭐ 통합 업그레이드 함수 (매니저가 호출함)
+    public void ApplyUpgrade(int upgradeType)
+    {
+        switch (upgradeType)
+        {
+            case 0: // 이동 속도
+                moveSpeed += 1f;
+                Debug.Log("이동 속도 증가!");
+                break;
+            case 1: // 공격 속도
+                if (weapon != null) weapon.attackRate *= 0.9f;
+                Debug.Log("공격 속도 증가!");
+                break;
+            case 2: // 공격력 (New!)
+                damageMultiplier += 0.2f; // 20% 증가
+                Debug.Log("공격력 증가!");
+                break;
+            case 3: // 최대 체력 & 회복 (New!)
+                maxHealth += 20;
+                currentHealth = maxHealth; // 체력 회복
+                UpdateHealthUI();
+                Debug.Log("최대 체력 증가 & 회복!");
+                break;
+            case 4: // 자석 범위 (New!)
+                magnetRange += 2f;
+                Debug.Log("자석 범위 증가!");
+                break;
+        }
+    }
+
+    // --- 기타 기능 ---
+    Vector3 GetAutoDodgeVector()
+    {
+        Collider[] enemies = Physics.OverlapSphere(transform.position, detectionRadius, enemyLayer);
+        if (enemies.Length == 0) return Vector3.zero;
+        Vector3 flee = Vector3.zero;
+        foreach (var e in enemies)
+        {
+            Vector3 diff = transform.position - e.transform.position;
+            diff.y = 0;
+            flee += diff.normalized / (diff.magnitude + 0.1f);
+        }
+        return flee.normalized;
+    }
+
+    public void RetryGame() { Time.timeScale = 1f; SceneManager.LoadScene(SceneManager.GetActiveScene().name); }
+    public void SetAutoLevelUp(bool isOn) { isAutoLevelUp = isOn; }
     void UpdateHealthUI() { if (hpSlider != null) hpSlider.value = (float)currentHealth / maxHealth; }
     void UpdateExpUI() { if (expSlider != null) expSlider.value = (float)currentExp / maxExp; }
 }

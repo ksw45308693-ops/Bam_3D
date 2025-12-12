@@ -6,7 +6,7 @@ public class EnemyHealth : MonoBehaviour
     private int currentHealth;
 
     public GameObject expGemPrefab;
-    public GameObject damageTextPrefab; // ⭐ 데미지 텍스트 프리팹 추가
+    public GameObject damageTextPrefab;
 
     void Start()
     {
@@ -17,7 +17,6 @@ public class EnemyHealth : MonoBehaviour
     {
         currentHealth -= damageAmount;
 
-        // ⭐ 데미지 텍스트 띄우기
         if (damageTextPrefab != null)
         {
             ShowDamageText(damageAmount);
@@ -31,17 +30,20 @@ public class EnemyHealth : MonoBehaviour
 
     void ShowDamageText(int damage)
     {
-        // 적 머리 위쪽(Y + 1.5 정도)에 생성
         Vector3 spawnPos = transform.position + Vector3.up * 1.5f;
-
         GameObject hudText = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
-
-        // 데미지 숫자 전달
         hudText.GetComponent<DamageText>().SetDamage(damage);
     }
 
     void Die()
     {
+        // ⭐ 추가: 게임 매니저를 찾아서 킬수 증가 함수 호출
+        GameManager gm = FindObjectOfType<GameManager>();
+        if (gm != null)
+        {
+            gm.AddKill();
+        }
+
         if (expGemPrefab != null)
         {
             Instantiate(expGemPrefab, transform.position, Quaternion.identity);
