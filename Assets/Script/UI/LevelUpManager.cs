@@ -1,18 +1,18 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
-using System.Collections.Generic; // 리스트 사용을 위해 필수
+using System.Collections.Generic;
 
 public class LevelUpManager : MonoBehaviour
 {
     [Header("UI")]
     public GameObject levelUpPanel;
-    public Button[] optionButtons; // 인스펙터에서 버튼들을 꼭 다 채워주세요!
-    public Text[] optionTexts;     // 텍스트들도 개수를 맞춰주세요!
+    public Button[] optionButtons;
+    public Text[] optionTexts;
 
     private PlayerController player;
 
     private string[] upgradeNames = {
-        "이동 속도 UP", "공격 속도 UP", "공격력 UP", "체력 회복", "자석 범위 UP"
+        "이동 속도 UP", "공격 속도 UP", "공격력 UP", "최대 체력 UP", "자석 범위 UP"
     };
 
     private int[] assignedUpgrades;
@@ -20,41 +20,43 @@ public class LevelUpManager : MonoBehaviour
     void Start()
     {
         player = FindObjectOfType<PlayerController>();
-        levelUpPanel.SetActive(false);
+        if (levelUpPanel != null) levelUpPanel.SetActive(false);
 
-        // 버튼 개수만큼 배열 생성 (안전장치)
-        if (optionButtons != null)
+        // 안전장치: 버튼 배열이 비어있으면 에러 로그 띄우고 중단 (게임 멈춤 방지)
+        if (optionButtons == null || optionButtons.Length == 0)
         {
-            assignedUpgrades = new int[optionButtons.Length];
+            Debug.LogError("🚨 LevelUpManager: 버튼이 연결되지 않았습니다! 인스펙터를 확인하세요.");
+            return;
         }
+
+        // 버튼 개수만큼 배열 생성
+        assignedUpgrades = new int[optionButtons.Length];
     }
 
     public void ShowLevelUpWindow(bool isAuto)
     {
-        // ⭐ [중복 방지] 덱 만들기 (0, 1, 2, 3, 4)
-        List<int> deck = new List<int>();
-        for (int i = 0; i < upgradeNames.Length; i++)
-        {
-            deck.Add(i);
-        }
+        if (optionButtons == null || optionButtons.Length == 0) return;
 
-        // 버튼 개수만큼 반복
+        // 중복 방지 덱 생성
+        List<int> deck = new List<int>();
+        for (int i = 0; i < upgradeNames.Length; i++) deck.Add(i);
+
         for (int i = 0; i < optionButtons.Length; i++)
         {
-            // 더 이상 뽑을 카드가 없으면 중단
+            // 카드가 부족하면 멈춤
             if (deck.Count == 0) break;
 
-            // 덱에서 랜덤으로 하나 뽑기
             int randomIndex = Random.Range(0, deck.Count);
             int selectedUpgrade = deck[randomIndex];
-
-            // 뽑은 카드는 덱에서 제거 (중복 방지)
             deck.RemoveAt(randomIndex);
 
-            // 해당 버튼에 능력 할당
-            assignedUpgrades[i] = selectedUpgrade;
+            // 배열 범위 안전 체크
+            if (assignedUpgrades != null && i < assignedUpgrades.Length)
+            {
+                assignedUpgrades[i] = selectedUpgrade;
+            }
 
-            // 텍스트 갱신 (배열 범위 확인)
+            // 텍스트 갱신 (텍스트 배열이 버튼보다 짧아도 에러 안 나게 처리)
             if (optionTexts != null && i < optionTexts.Length && optionTexts[i] != null)
             {
                 optionTexts[i].text = upgradeNames[selectedUpgrade];
@@ -67,28 +69,27 @@ public class LevelUpManager : MonoBehaviour
         }
         else
         {
-            levelUpPanel.SetActive(true);
+            if (levelUpPanel != null) levelUpPanel.SetActive(true);
             Time.timeScale = 0f;
         }
     }
 
     public void SelectOption(int buttonIndex)
     {
-        // ⭐ [에러 방지] 버튼 번호가 배열 범위를 넘어가면 무시 (게임 멈춤 방지)
+        // ⭐ [에러 원천 차단] 
+        // 배열이 안 만들어졌거나, 인덱스가 범위를 벗어나면 그냥 무시함 (에러 안 띄움)
         if (assignedUpgrades == null || buttonIndex < 0 || buttonIndex >= assignedUpgrades.Length)
         {
-            Debug.LogWarning($"버튼 설정 오류! 입력된 번호: {buttonIndex}, 현재 배열 크기: {(assignedUpgrades != null ? assignedUpgrades.Length : 0)}");
-            // 인스펙터의 Option Buttons에 버튼을 모두 연결했는지 확인하세요!
+            Debug.LogWarning($"⚠️ 버튼 설정 오류! 입력된 번호: {buttonIndex}. (리스트를 다시 연결해보세요)");
             return;
         }
 
         if (player != null)
         {
-            int upgradeType = assignedUpgrades[buttonIndex];
-            player.ApplyUpgrade(upgradeType);
+            player.ApplyUpgrade(assignedUpgrades[buttonIndex]);
         }
 
-        levelUpPanel.SetActive(false);
+        if (levelUpPanel != null) levelUpPanel.SetActive(false);
         Time.timeScale = 1f;
     }
 }

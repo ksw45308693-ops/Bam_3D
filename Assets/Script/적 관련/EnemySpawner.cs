@@ -2,20 +2,21 @@
 
 public class EnemySpawner : MonoBehaviour
 {
-    [Header("Basic Settings")]
-    public GameObject enemyPrefab;
+    [Header("Basic Settings (기본 설정)")]
+    public GameObject enemyPrefab; // 일반 적 프리팹
+    public GameObject bossPrefab;  // ⭐ [추가] 보스 전용 프리팹 (인스펙터에서 연결하세요!)
     public Transform player;
     public float spawnRadius = 10f;
 
-    [Header("Performance Limit")]
-    public int maxEnemyCount = 300; // ⭐ 최대 300마리까지만 유지
+    [Header("Performance Limit (최적화 설정)")]
+    public int maxEnemyCount = 300;
 
-    [Header("Wave Settings")]
+    [Header("Wave Settings (웨이브 시스템)")]
     public float waveDuration = 10f;
     public int currentWave = 0;
     private float waveTimer;
 
-    [Header("Difficulty Scaling")]
+    [Header("Difficulty Scaling (난이도 조절)")]
     public float spawnInterval = 1f;
     public float minSpawnInterval = 0.1f;
     public float spawnIntervalDecrease = 0.1f;
@@ -40,13 +41,11 @@ public class EnemySpawner : MonoBehaviour
         timer += Time.deltaTime;
         if (timer >= spawnInterval)
         {
-            // ⭐ [최적화 핵심] 현재 적의 숫자를 세고, 제한보다 적을 때만 생성
-            // (Tag로 찾는 방식은 적이 많을 때 약간의 부하가 있지만, Instantiate를 무작정 하는 것보다는 낫습니다)
             int currentCount = GameObject.FindGameObjectsWithTag("Enemy").Length;
 
             if (currentCount < maxEnemyCount)
             {
-                SpawnEnemy(false);
+                SpawnEnemy(false); // 일반 적 생성
             }
 
             timer = 0f;
@@ -59,32 +58,49 @@ public class EnemySpawner : MonoBehaviour
         waveTimer = 0;
         spawnInterval = Mathf.Max(minSpawnInterval, spawnInterval - spawnIntervalDecrease);
 
-        // 보스는 마릿수 제한 무시하고 중요하게 등장
+        // 5 웨이브마다 보스 등장
         if (currentWave % 5 == 0) SpawnEnemy(true);
 
         Debug.Log($"🌊 웨이브 {currentWave} 시작! (현재 적: {GameObject.FindGameObjectsWithTag("Enemy").Length}마리)");
     }
 
-    int GetWaveHealth() { return initialHealth + (currentWave * healthIncreasePerWave); }
+    int GetWaveHealth()
+    {
+        return initialHealth + (currentWave * healthIncreasePerWave);
+    }
 
     void SpawnEnemy(bool isBoss)
     {
         Vector2 randomCircle = Random.insideUnitCircle.normalized * spawnRadius;
         Vector3 spawnPos = player.position + new Vector3(randomCircle.x, 0, randomCircle.y);
 
-        GameObject enemy = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
+        // ⭐ [수정] 보스냐 아니냐에 따라 생성할 프리팹 결정
+        GameObject prefabToSpawn = enemyPrefab; // 기본값: 일반 적
+
+        if (isBoss && bossPrefab != null)
+        {
+            prefabToSpawn = bossPrefab; // 보스면 보스 프리팹 사용
+        }
+
+        // 결정된 프리팹 생성
+        GameObject enemy = Instantiate(prefabToSpawn, spawnPos, Quaternion.identity);
         EnemyHealth hp = enemy.GetComponent<EnemyHealth>();
 
         if (hp != null)
         {
             if (isBoss)
             {
-                hp.maxHealth = GetWaveHealth() * 10;
-                enemy.transform.localScale = Vector3.one * 2f;
-                enemy.name = "Boss";
+                // 보스 설정
+                hp.maxHealth = GetWaveHealth() * 10; // 체력 10배
+                enemy.name = "Boss"; // 이름 변경
+
+                // (참고: 보스 프리팹은 이미 크기가 클 테니, 강제 크기 조절 코드는 뺐습니다.
+                // 만약 보스도 크기를 키우고 싶다면 아래 주석을 해제하세요)
+                // enemy.transform.localScale = Vector3.one * 2f;
             }
             else
             {
+                // 일반 적 설정
                 hp.maxHealth = GetWaveHealth();
             }
         }
