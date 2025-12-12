@@ -7,11 +7,10 @@ public class WeaponController : MonoBehaviour
     public float range = 10f; // 사거리
 
     private float timer;
-    private PlayerController playerController; // 플레이어 스탯을 가져오기 위한 참조
+    private PlayerController playerController;
 
     void Start()
     {
-        // 같은 오브젝트에 있는 PlayerController를 미리 찾아둠 (최적화)
         playerController = GetComponent<PlayerController>();
     }
 
@@ -19,7 +18,6 @@ public class WeaponController : MonoBehaviour
     {
         timer += Time.deltaTime;
 
-        // 공격 속도 업그레이드가 있다면 attackRate가 줄어들었을 것임
         if (timer > attackRate)
         {
             AttackNearestEnemy();
@@ -34,7 +32,6 @@ public class WeaponController : MonoBehaviour
         float minDistance = Mathf.Infinity;
         Vector3 currentPos = transform.position;
 
-        // 가장 가까운 적 찾기
         foreach (GameObject enemy in enemies)
         {
             float dist = Vector3.Distance(enemy.transform.position, currentPos);
@@ -45,26 +42,27 @@ public class WeaponController : MonoBehaviour
             }
         }
 
-        // 적이 있으면 발사
         if (nearestEnemy != null)
         {
-            GameObject bullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
+            // ⭐ [핵심 수정] 발사 위치 보정 (발바닥이 아닌 1m 위에서 발사)
+            // 캐릭터 모델의 피벗(중심)이 발바닥에 있어서 총알이 땅에 묻히는 걸 방지합니다.
+            Vector3 spawnPos = transform.position + Vector3.up * 1.0f;
 
-            // Y축(높이) 차이는 무시하고 수평 방향 계산
-            Vector3 direction = (nearestEnemy.transform.position - transform.position);
-            direction.y = 0;
+            // 수정된 위치에서 총알 생성
+            GameObject bullet = Instantiate(bulletPrefab, spawnPos, Quaternion.identity);
 
-            // ⭐ [핵심 수정] 플레이어의 공격력 스탯 적용
-            int baseDamage = 10; // 기본 데미지
+            // 방향 계산도 '발사 위치(spawnPos)'를 기준으로 다시 계산해야 정확합니다.
+            Vector3 direction = (nearestEnemy.transform.position - spawnPos);
+            direction.y = 0; // 수평 유지
+
+            int baseDamage = 10;
             int finalDamage = baseDamage;
 
             if (playerController != null)
             {
-                // 기본 데미지 * 배율 (반올림)
                 finalDamage = Mathf.RoundToInt(baseDamage * playerController.damageMultiplier);
             }
 
-            // 총알 스크립트에 데미지와 방향 전달
             Bullet b = bullet.GetComponent<Bullet>();
             if (b != null)
             {

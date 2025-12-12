@@ -106,6 +106,14 @@ public class PlayerController : MonoBehaviour
     void Die()
     {
         isDead = true;
+
+        // ⭐ 추가: 게임 매니저에게 저장 요청
+        GameManager gm = FindObjectOfType<GameManager>();
+        if (gm != null)
+        {
+            gm.GameOverSave();
+        }
+
         if (gameOverPanel != null) gameOverPanel.SetActive(true);
         Time.timeScale = 0f;
     }

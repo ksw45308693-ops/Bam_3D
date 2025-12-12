@@ -5,16 +5,22 @@ public class GameManager : MonoBehaviour
 {
     [Header("UI")]
     public Text timerText;
-    public Text killText; // ⭐ 추가: 킬수 텍스트 연결
+    public Text killText;
+    public Text bestScoreText; // ⭐ 추가: 최고 기록 보여줄 텍스트
 
     private float survivalTime;
     private bool isLive = true;
-    private int killCount = 0; // ⭐ 추가: 내부 카운트 변수
+    private int killCount = 0;
+
+    // 이 씬에서 관리하는 최고 기록
+    private int bestScore = 0;
 
     void Start()
     {
-        // 시작할 때 0으로 초기화
         killCount = 0;
+
+        // ⭐ 1. 저장된 최고 기록 불러오기 (없으면 0)
+        bestScore = PlayerPrefs.GetInt("BestKill", 0);
         UpdateKillUI();
     }
 
@@ -32,20 +38,38 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    // ⭐ 외부(적)에서 호출할 함수: 처치 수 1 증가
     public void AddKill()
     {
         killCount++;
         UpdateKillUI();
     }
 
-    // UI 갱신 함수
     void UpdateKillUI()
     {
         if (killText != null)
         {
-            // 원하는 형식으로 표시 (예: "☠️ 150")
-            killText.text = "Kill :  " + killCount.ToString();
+            killText.text = "☠️ " + killCount;
+        }
+
+        // ⭐ 2. 최고 기록 UI 갱신 (현재 점수가 더 높으면 실시간 갱신 효과)
+        if (bestScoreText != null)
+        {
+            int displayScore = Mathf.Max(killCount, bestScore);
+            bestScoreText.text = "🏆 Best: " + displayScore;
+        }
+    }
+
+    // ⭐ 3. 게임 오버 시 저장하는 함수 (PlayerController에서 부를 예정)
+    public void GameOverSave()
+    {
+        isLive = false;
+
+        // 현재 기록이 최고 기록보다 높으면 저장
+        if (killCount > bestScore)
+        {
+            PlayerPrefs.SetInt("BestKill", killCount); // 내 기기에 'BestKill'이라는 이름으로 숫자 저장
+            PlayerPrefs.Save(); // 확실하게 저장
+            Debug.Log("🎉 신기록 달성! 저장 완료!");
         }
     }
 }
