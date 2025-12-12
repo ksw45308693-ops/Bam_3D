@@ -2,10 +2,11 @@
 
 public class EnemyHealth : MonoBehaviour
 {
-    public int maxHealth = 30; // 적의 최대 체력
+    public int maxHealth = 30;
     private int currentHealth;
 
-    public GameObject expGemPrefab; // ⭐ 인스펙터에서 보석 프리팹을 꼭 넣어주세요!
+    public GameObject expGemPrefab;
+    public GameObject damageTextPrefab; // ⭐ 데미지 텍스트 프리팹 추가
 
     void Start()
     {
@@ -16,20 +17,35 @@ public class EnemyHealth : MonoBehaviour
     {
         currentHealth -= damageAmount;
 
+        // ⭐ 데미지 텍스트 띄우기
+        if (damageTextPrefab != null)
+        {
+            ShowDamageText(damageAmount);
+        }
+
         if (currentHealth <= 0)
         {
             Die();
         }
     }
 
+    void ShowDamageText(int damage)
+    {
+        // 적 머리 위쪽(Y + 1.5 정도)에 생성
+        Vector3 spawnPos = transform.position + Vector3.up * 1.5f;
+
+        GameObject hudText = Instantiate(damageTextPrefab, spawnPos, Quaternion.identity);
+
+        // 데미지 숫자 전달
+        hudText.GetComponent<DamageText>().SetDamage(damage);
+    }
+
     void Die()
     {
-        // 보석 생성 (프리팹이 연결되어 있을 때만)
         if (expGemPrefab != null)
         {
             Instantiate(expGemPrefab, transform.position, Quaternion.identity);
         }
-
-        Destroy(gameObject); // 적 삭제
+        Destroy(gameObject);
     }
 }
